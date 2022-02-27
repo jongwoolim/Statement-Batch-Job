@@ -1,6 +1,9 @@
 package me.jongwoo.batch.statementbatch.configuration;
 
 import lombok.RequiredArgsConstructor;
+import me.jongwoo.batch.statementbatch.domain.CustomerAddressUpdate;
+import me.jongwoo.batch.statementbatch.domain.CustomerContactUpdate;
+import me.jongwoo.batch.statementbatch.domain.CustomerNameUpdate;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
@@ -16,6 +19,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.Resource;
+import org.springframework.util.StringUtils;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -95,9 +99,50 @@ public class ImportJobConfiguration {
     }
 
 
-//    @Bean
-//    public FieldSetMapper<Object> customerUpdateFieldSetMapper() {
-//    }
+    @Bean
+    public FieldSetMapper<Object> customerUpdateFieldSetMapper() {
+        return fieldSet -> {
+            switch (fieldSet.readInt("recordId")){
+                case 1:
+                    return new CustomerNameUpdate(
+                            fieldSet.readLong("customerId"),
+                            fieldSet.readString("firstName"),
+                            fieldSet.readString("middleName"),
+                            fieldSet.readString("lastName")
+                    );
+                case 2:
+                    return new CustomerAddressUpdate(
+                            fieldSet.readLong("customerId"),
+                            fieldSet.readString("address1"),
+                            fieldSet.readString("address2"),
+                            fieldSet.readString("city"),
+                            fieldSet.readString("state"),
+                            fieldSet.readString("postalCode")
+                    );
+                case 3:
+                    String rawPreference =
+                            fieldSet.readString("notificationPreference");
+
+                    Integer notificationPreference = null;
+
+                    if(StringUtils.hasText(rawPreference)){
+                        notificationPreference = Integer.parseInt(rawPreference);
+                    }
+
+                    return new CustomerContactUpdate(
+                            fieldSet.readLong("customerId"),
+                            fieldSet.readString("emailAddress"),
+                            fieldSet.readString("homePhone"),
+                            fieldSet.readString("cellPhone"),
+                            fieldSet.readString("workPhone"),
+                            notificationPreference
+                    );
+
+                default: throw new IllegalArgumentException("Invalid record type was found: " + fieldSet.readInt("recordId"));
+            }
+
+        };
+    }
 
 
 }
