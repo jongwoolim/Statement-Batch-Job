@@ -1,9 +1,11 @@
 package me.jongwoo.batch.statementbatch.configuration;
 
 import lombok.RequiredArgsConstructor;
+import me.jongwoo.batch.statementbatch.batch.CustomerItemValidator;
 import me.jongwoo.batch.statementbatch.domain.CustomerAddressUpdate;
 import me.jongwoo.batch.statementbatch.domain.CustomerContactUpdate;
 import me.jongwoo.batch.statementbatch.domain.CustomerNameUpdate;
+import me.jongwoo.batch.statementbatch.domain.CustomerUpdate;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
@@ -15,6 +17,7 @@ import org.springframework.batch.item.file.mapping.FieldSetMapper;
 import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
 import org.springframework.batch.item.file.transform.LineTokenizer;
 import org.springframework.batch.item.file.transform.PatternMatchingCompositeLineTokenizer;
+import org.springframework.batch.item.validator.ValidatingItemProcessor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -60,7 +63,7 @@ public class ImportJobConfiguration {
                 .name("customerUpdateItemReader")
                 .resource(inputFile)
                 .lineTokenizer(customerUpdatesLineTokenizer())
-//                .fieldSetMapper(customerUpdateFieldSetMapper())
+                .fieldSetMapper(customerUpdateFieldSetMapper())
                 .build();
     }
 
@@ -142,6 +145,18 @@ public class ImportJobConfiguration {
             }
 
         };
+    }
+
+    @Bean
+    public ValidatingItemProcessor<CustomerUpdate> customerValidatingItemProcessor(
+            CustomerItemValidator validator){
+
+        ValidatingItemProcessor<CustomerUpdate> customerUpdateValidatingItemProcessor =
+                new ValidatingItemProcessor<>(validator);
+
+        customerUpdateValidatingItemProcessor.setFilter(true);
+
+        return customerUpdateValidatingItemProcessor;
     }
 
 
