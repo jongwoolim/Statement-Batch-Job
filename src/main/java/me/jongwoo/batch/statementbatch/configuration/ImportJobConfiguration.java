@@ -13,6 +13,7 @@ import org.springframework.batch.core.launch.support.RunIdIncrementer;
 import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.database.JdbcBatchItemWriter;
 import org.springframework.batch.item.database.builder.JdbcBatchItemWriterBuilder;
+import org.springframework.batch.item.file.FlatFileItemReader;
 import org.springframework.batch.item.file.builder.FlatFileItemReaderBuilder;
 import org.springframework.batch.item.file.mapping.FieldSetMapper;
 import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
@@ -94,7 +95,7 @@ public class ImportJobConfiguration {
                         ":description, " +
                         ":credit, " +
                         ":debit, " +
-                        ":timestamp")
+                        ":timestamp)")
                 .beanMapped()
                 .build();
     }
@@ -112,7 +113,7 @@ public class ImportJobConfiguration {
 
     @Bean
     @StepScope
-    public ItemReader<CustomerUpdate> customerUpdateItemReader(
+    public FlatFileItemReader<CustomerUpdate> customerUpdateItemReader(
             @Value("#{jobParameters['customerUpdateFile']}") Resource inputFile
     ) throws Exception {
         return new FlatFileItemReaderBuilder<CustomerUpdate>()
@@ -144,9 +145,9 @@ public class ImportJobConfiguration {
         recordType3.afterPropertiesSet();
 
         Map<String, LineTokenizer> tokenizers = new HashMap<>(3);
-        tokenizers.put("1", recordType1);
-        tokenizers.put("2", recordType2);
-        tokenizers.put("3", recordType3);
+        tokenizers.put("1*", recordType1);
+        tokenizers.put("2*", recordType2);
+        tokenizers.put("3*", recordType3);
 
         PatternMatchingCompositeLineTokenizer lineTokenizer =
                 new PatternMatchingCompositeLineTokenizer();
@@ -266,9 +267,9 @@ public class ImportJobConfiguration {
                 .sql("UPDATE CUSTOMER SET " +
                         "EMAIL_ADDRESS = COALESCE(:emailAddress, EMAIL_ADDRESS), " +
                         "HOME_PHONE = COALESCE(:homePhone, HOME_PHONE), " +
-                        "CELL_PHONE = COALESCE(:cellphone, CELL_PHONE), " +
+                        "CELL_PHONE = COALESCE(:cellPhone, CELL_PHONE), " +
                         "WORK_PHONE = COALESCE(:workPhone, WORK_PHONE), " +
-                        "NOTIFICATION_PREF = COALESCE(:notificationPreferences, " +
+                        "NOTIFICATION_PREF = COALESCE(cast(:notificationPreferences as varchar), " +
                         "NOTIFICATION_PREF) " +
                         "where CUSTOMER_ID = :customerId")
                 .dataSource(dataSource)

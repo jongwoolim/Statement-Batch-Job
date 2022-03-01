@@ -17,6 +17,10 @@ public class Transaction {
     private BigDecimal debit;
     private Date timestamp;
 
+    public Transaction(){
+
+    }
+
     public Transaction(
             long transactionId, long accountId, String description,
             BigDecimal credit, BigDecimal debit, Date timestamp) {
