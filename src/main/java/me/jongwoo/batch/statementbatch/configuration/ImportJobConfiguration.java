@@ -192,5 +192,21 @@ public class ImportJobConfiguration {
                 .build();
     }
 
+    @Bean
+    public JdbcBatchItemWriter<CustomerUpdate> customerContactUpdateItemWriter(DataSource dataSource){
+        return new JdbcBatchItemWriterBuilder<CustomerUpdate>()
+                .beanMapped()
+                .sql("UPDATE CUSTOMER SET " +
+                        "EMAIL_ADDRESS = COALESCE(:emailAddress, EMAIL_ADDRESS), " +
+                        "HOME_PHONE = COALESCE(:homePhone, HOME_PHONE), " +
+                        "CELL_PHONE = COALESCE(:cellphone, CELL_PHONE), " +
+                        "WORK_PHONE = COALESCE(:workPhone, WORK_PHONE), " +
+                        "NOTIFICATION_PREF = COALESCE(:notificationPreferences, " +
+                        "NOTIFICATION_PREF) " +
+                        "where CUSTOMER_ID = :customerId")
+                .build();
+    }
+
+
 
 }
