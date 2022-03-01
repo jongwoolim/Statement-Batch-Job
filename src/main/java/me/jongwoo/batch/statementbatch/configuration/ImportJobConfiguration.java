@@ -202,8 +202,8 @@ public class ImportJobConfiguration {
                 .sql("UPDATE CUSTOMER SET " +
                         "ADDRESS1 = COALESCE(:address1, ADDRESS1), " +
                         "ADDRESS2 = COALESCE(:address2, ADDRESS2), " +
-                        "CITY = COALESCE(:city, CITY) " +
-                        "STATE = COALESCE(:state, STATE) " +
+                        "CITY = COALESCE(:city, CITY), " +
+                        "STATE = COALESCE(:state, STATE), " +
                         "POSTAL_CODE = COALESCE(:postalCode, POSTAL_CODE) " +
                         "WHERE CUSTOMER_ID = :customerId")
                 .dataSource(dataSource)
@@ -222,6 +222,7 @@ public class ImportJobConfiguration {
                         "NOTIFICATION_PREF = COALESCE(:notificationPreferences, " +
                         "NOTIFICATION_PREF) " +
                         "where CUSTOMER_ID = :customerId")
+                .dataSource(dataSource)
                 .build();
     }
 
