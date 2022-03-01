@@ -57,7 +57,7 @@ public class ImportJobConfiguration {
         return this.stepBuilderFactory.get("importTransactions")
                 .<Transaction, Transaction>chunk(100)
                 .reader(transactionItemReader(null))
-//                .writer(transactionItemWriter(null))
+                .writer(transactionItemWriter(null))
                 .build()
                 ;
     }
@@ -77,6 +77,25 @@ public class ImportJobConfiguration {
                 .resource(transactionFile)
                 .addFragmentRootElements("transaction")
                 .unmarshaller(unmarshaller)
+                .build();
+    }
+
+    @Bean
+    public JdbcBatchItemWriter<Transaction> transactionItemWriter(DataSource dataSource){
+        return new JdbcBatchItemWriterBuilder<Transaction>()
+                .dataSource(dataSource)
+                .sql("INSERT INTO TRANSACTION (TRANSACTION_ID, " +
+                        "ACCOUNT_ACCOUNT_ID, " +
+                        "DESCRIPTION, " +
+                        "CREDIT, " +
+                        "DEBIT, " +
+                        "TIMESTAMP) VALUES(:transactionId, " +
+                        ":accountId, " +
+                        ":description, " +
+                        ":credit, " +
+                        ":debit, " +
+                        ":timestamp")
+                .beanMapped()
                 .build();
     }
 
