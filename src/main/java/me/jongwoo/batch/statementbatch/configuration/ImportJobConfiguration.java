@@ -2,6 +2,7 @@ package me.jongwoo.batch.statementbatch.configuration;
 
 import lombok.RequiredArgsConstructor;
 import me.jongwoo.batch.statementbatch.batch.CustomerItemValidator;
+import me.jongwoo.batch.statementbatch.batch.CustomerUpdateClassifier;
 import me.jongwoo.batch.statementbatch.domain.CustomerAddressUpdate;
 import me.jongwoo.batch.statementbatch.domain.CustomerContactUpdate;
 import me.jongwoo.batch.statementbatch.domain.CustomerNameUpdate;
@@ -11,6 +12,7 @@ import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepScope;
+import org.springframework.batch.core.launch.support.RunIdIncrementer;
 import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.database.JdbcBatchItemWriter;
 import org.springframework.batch.item.database.builder.JdbcBatchItemWriterBuilder;
@@ -19,6 +21,8 @@ import org.springframework.batch.item.file.mapping.FieldSetMapper;
 import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
 import org.springframework.batch.item.file.transform.LineTokenizer;
 import org.springframework.batch.item.file.transform.PatternMatchingCompositeLineTokenizer;
+import org.springframework.batch.item.support.ClassifierCompositeItemWriter;
+import org.springframework.batch.item.support.builder.ClassifierCompositeItemWriterBuilder;
 import org.springframework.batch.item.validator.ValidatingItemProcessor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -38,31 +42,31 @@ public class ImportJobConfiguration {
     private final StepBuilderFactory stepBuilderFactory;
 
     @Bean
-    public Job job(){
+    public Job job() throws Exception {
 
-//        return this.jobBuilderFactory.get("importJob")
-//                .start(importCustomerUpdates())
-//                .build();
-        return null;
+        return this.jobBuilderFactory.get("importJob")
+                .incrementer(new RunIdIncrementer())
+                .start(importCustomerUpdates())
+                .build();
     }
 
     @Bean
     public Step importCustomerUpdates() throws Exception {
         return this.stepBuilderFactory.get("importCustomerUpdates")
-                .chunk(100)
+                .<CustomerUpdate,CustomerUpdate>chunk(100)
                 .reader(customerUpdateItemReader(null))
-//                .processor(customerValidatingItemProcessor(null))
-//                .writer(customerUpdateItemWriter())
+                .processor(customerValidatingItemProcessor(null))
+                .writer(customerUpdateItemWriter())
                 .build()
                 ;
     }
 
     @Bean
     @StepScope
-    public ItemReader<?> customerUpdateItemReader(
+    public ItemReader<CustomerUpdate> customerUpdateItemReader(
             @Value("#{jobParameters['customerUpdateFile']}") Resource inputFile
     ) throws Exception {
-        return new FlatFileItemReaderBuilder<>()
+        return new FlatFileItemReaderBuilder<CustomerUpdate>()
                 .name("customerUpdateItemReader")
                 .resource(inputFile)
                 .lineTokenizer(customerUpdatesLineTokenizer())
@@ -106,7 +110,7 @@ public class ImportJobConfiguration {
 
 
     @Bean
-    public FieldSetMapper<Object> customerUpdateFieldSetMapper() {
+    public FieldSetMapper<CustomerUpdate> customerUpdateFieldSetMapper() {
         return fieldSet -> {
             switch (fieldSet.readInt("recordId")){
                 case 1:
@@ -164,6 +168,20 @@ public class ImportJobConfiguration {
 
     // 세 가지 서로 다른 갱신 해야하므로 Classifier기반으로 여러 ItemWriter 구현체에게 처리를 위임할 수 있게
     // ClassifierCompositeItemWriter 사용
+    @Bean
+    public ClassifierCompositeItemWriter<CustomerUpdate> customerUpdateItemWriter(){
+
+        CustomerUpdateClassifier classifier =
+                new CustomerUpdateClassifier(
+                        customerNameUpdateItemWriter(null),
+                        customerAddressUpdateItemWriter(null),
+                        customerContactUpdateItemWriter(null));
+
+        return new ClassifierCompositeItemWriterBuilder<CustomerUpdate>()
+                .classifier(classifier)
+                .build();
+    }
+
     @Bean
     public JdbcBatchItemWriter<CustomerUpdate> customerNameUpdateItemWriter(DataSource dataSource){
         return new JdbcBatchItemWriterBuilder<CustomerUpdate>()
