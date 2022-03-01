@@ -12,6 +12,8 @@ import org.springframework.batch.core.configuration.annotation.JobBuilderFactory
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.item.ItemReader;
+import org.springframework.batch.item.database.JdbcBatchItemWriter;
+import org.springframework.batch.item.database.builder.JdbcBatchItemWriterBuilder;
 import org.springframework.batch.item.file.builder.FlatFileItemReaderBuilder;
 import org.springframework.batch.item.file.mapping.FieldSetMapper;
 import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
@@ -24,6 +26,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.Resource;
 import org.springframework.util.StringUtils;
 
+import javax.sql.DataSource;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -157,6 +160,21 @@ public class ImportJobConfiguration {
         customerUpdateValidatingItemProcessor.setFilter(true);
 
         return customerUpdateValidatingItemProcessor;
+    }
+
+    // 세 가지 서로 다른 갱신 해야하므로 Classifier기반으로 여러 ItemWriter 구현체에게 처리를 위임할 수 있게
+    // ClassifierCompositeItemWriter 사용
+    @Bean
+    public JdbcBatchItemWriter<CustomerUpdate> customerNameUpdateItemWriter(DataSource dataSource){
+        return new JdbcBatchItemWriterBuilder<CustomerUpdate>()
+                .beanMapped()
+                .sql("UPDATE CUSTOMER " +
+                        "SET FIRST_NAME = COALESCE(:firstName, FIRST_NAME), " +
+                        "MIDDLE_NAME = COALESCE(:middleName, MIDDLE_NAME), " +
+                        "LAST_NAME = COALESCE(:lastName, LAST_NAME) " +
+                        "WHERE CUSTOMER_ID = :customerId")
+                .dataSource(dataSource)
+                .build();
     }
 
 
