@@ -177,5 +177,20 @@ public class ImportJobConfiguration {
                 .build();
     }
 
+    @Bean
+    public JdbcBatchItemWriter<CustomerUpdate> customerAddressUpdateItemWriter(DataSource dataSource){
+        return new JdbcBatchItemWriterBuilder<CustomerUpdate>()
+                .beanMapped()
+                .sql("UPDATE CUSTOMER SET " +
+                        "ADDRESS1 = COALESCE(:address1, ADDRESS1), " +
+                        "ADDRESS2 = COALESCE(:address2, ADDRESS2), " +
+                        "CITY = COALESCE(:city, CITY) " +
+                        "STATE = COALESCE(:state, STATE) " +
+                        "POSTAL_CODE = COALESCE(:postalCode, POSTAL_CODE) " +
+                        "WHERE CUSTOMER_ID = :customerId")
+                .dataSource(dataSource)
+                .build();
+    }
+
 
 }
