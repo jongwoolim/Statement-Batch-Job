@@ -3,10 +3,7 @@ package me.jongwoo.batch.statementbatch.configuration;
 import lombok.RequiredArgsConstructor;
 import me.jongwoo.batch.statementbatch.batch.CustomerItemValidator;
 import me.jongwoo.batch.statementbatch.batch.CustomerUpdateClassifier;
-import me.jongwoo.batch.statementbatch.domain.CustomerAddressUpdate;
-import me.jongwoo.batch.statementbatch.domain.CustomerContactUpdate;
-import me.jongwoo.batch.statementbatch.domain.CustomerNameUpdate;
-import me.jongwoo.batch.statementbatch.domain.CustomerUpdate;
+import me.jongwoo.batch.statementbatch.domain.*;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
@@ -24,10 +21,14 @@ import org.springframework.batch.item.file.transform.PatternMatchingCompositeLin
 import org.springframework.batch.item.support.ClassifierCompositeItemWriter;
 import org.springframework.batch.item.support.builder.ClassifierCompositeItemWriterBuilder;
 import org.springframework.batch.item.validator.ValidatingItemProcessor;
+import org.springframework.batch.item.xml.StaxEventItemReader;
+import org.springframework.batch.item.xml.StaxEventItemWriter;
+import org.springframework.batch.item.xml.builder.StaxEventItemReaderBuilder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.Resource;
+import org.springframework.oxm.jaxb.Jaxb2Marshaller;
 import org.springframework.util.StringUtils;
 
 import javax.sql.DataSource;
@@ -47,6 +48,35 @@ public class ImportJobConfiguration {
         return this.jobBuilderFactory.get("importJob")
                 .incrementer(new RunIdIncrementer())
                 .start(importCustomerUpdates())
+                .next(importTransactions())
+                .build();
+    }
+
+    @Bean
+    public Step importTransactions() {
+        return this.stepBuilderFactory.get("importTransactions")
+                .<Transaction, Transaction>chunk(100)
+                .reader(transactionItemReader(null))
+//                .writer(transactionItemWriter(null))
+                .build()
+                ;
+    }
+
+    @Bean
+    @StepScope
+    public StaxEventItemReader<Transaction> transactionItemReader(
+            @Value("#{jobParameters['transactionFile']}") Resource transactionFile
+    ) {
+
+        Jaxb2Marshaller unmarshaller = new Jaxb2Marshaller();
+
+        unmarshaller.setClassesToBeBound(Transaction.class);
+
+        return new StaxEventItemReaderBuilder<Transaction>()
+                .name("fooReader")
+                .resource(transactionFile)
+                .addFragmentRootElements("transaction")
+                .unmarshaller(unmarshaller)
                 .build();
     }
 
