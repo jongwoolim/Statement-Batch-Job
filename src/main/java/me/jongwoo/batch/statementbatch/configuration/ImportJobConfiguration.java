@@ -1,9 +1,7 @@
 package me.jongwoo.batch.statementbatch.configuration;
 
 import lombok.RequiredArgsConstructor;
-import me.jongwoo.batch.statementbatch.batch.AccountItemProcessor;
-import me.jongwoo.batch.statementbatch.batch.CustomerItemValidator;
-import me.jongwoo.batch.statementbatch.batch.CustomerUpdateClassifier;
+import me.jongwoo.batch.statementbatch.batch.*;
 import me.jongwoo.batch.statementbatch.domain.*;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
@@ -12,12 +10,17 @@ import org.springframework.batch.core.configuration.annotation.StepBuilderFactor
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
 import org.springframework.batch.item.ItemReader;
+import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.database.JdbcBatchItemWriter;
 import org.springframework.batch.item.database.JdbcCursorItemReader;
 import org.springframework.batch.item.database.builder.JdbcBatchItemWriterBuilder;
 import org.springframework.batch.item.database.builder.JdbcCursorItemReaderBuilder;
 import org.springframework.batch.item.file.FlatFileItemReader;
+import org.springframework.batch.item.file.FlatFileItemWriter;
+import org.springframework.batch.item.file.MultiResourceItemReader;
+import org.springframework.batch.item.file.MultiResourceItemWriter;
 import org.springframework.batch.item.file.builder.FlatFileItemReaderBuilder;
+import org.springframework.batch.item.file.builder.MultiResourceItemWriterBuilder;
 import org.springframework.batch.item.file.mapping.FieldSetMapper;
 import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
 import org.springframework.batch.item.file.transform.LineTokenizer;
@@ -51,9 +54,9 @@ public class ImportJobConfiguration {
         return this.jobBuilderFactory.get("importJob")
                 .incrementer(new RunIdIncrementer())
                 .start(importCustomerUpdates())
-                .next(importTransactions())
+//                .next(importTransactions())
                 .next(applyTransactions())
-//                .next(generateStatements(null))
+                .next(generateStatements(null))
                 .build();
     }
 
@@ -63,7 +66,7 @@ public class ImportJobConfiguration {
                 .<Statement, Statement>chunk(1)
                 .reader(statementItemReader(null))
                 .processor(itemProcessor)
-//                .writer(statementItemWriter(null))
+                .writer(statementItemWriter(null, null))
                 .build();
     }
 
@@ -95,6 +98,33 @@ public class ImportJobConfiguration {
                     return new Statement(customer);
 
                 }).build();
+    }
+
+    @Bean
+    @StepScope
+    // 파일당 하나의 명세서를 만들어내기 위해 MultiResourceItemWriter 사용
+    public MultiResourceItemWriter<Statement> statementItemWriter(
+            @Value("#{jobParameters['outputDirectory']}") Resource outputDir,
+            CustomerOutputFileSuffixCreator suffixCreator
+    ){
+        return new MultiResourceItemWriterBuilder<Statement>()
+                .name("statementItemWrtier")
+                .resource(outputDir)
+                .itemCountLimitPerResource(1) // 각 리소스에 쓰기 작업을 수행할 아이템 수
+                .delegate(individualStatementItemWriter())
+                .resourceSuffixCreator(suffixCreator)
+                .build();
+    }
+
+    @Bean
+    public FlatFileItemWriter<Statement> individualStatementItemWriter() {
+        FlatFileItemWriter<Statement> itemWriter = new FlatFileItemWriter<>();
+
+        itemWriter.setName("individualStatementItemWrtier");
+        itemWriter.setHeaderCallback(new StatementHeaderCallback());
+        itemWriter.setLineAggregator(new StatementLineAggregator());
+
+        return itemWriter;
     }
 
     @Bean
