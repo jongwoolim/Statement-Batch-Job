@@ -10,6 +10,7 @@ import org.springframework.batch.core.configuration.annotation.JobBuilderFactory
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
+import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.database.JdbcBatchItemWriter;
 import org.springframework.batch.item.database.JdbcCursorItemReader;
 import org.springframework.batch.item.database.builder.JdbcBatchItemWriterBuilder;
@@ -51,7 +52,48 @@ public class ImportJobConfiguration {
                 .start(importCustomerUpdates())
                 .next(importTransactions())
                 .next(applyTransactions())
+//                .next(generateStatements(null))
                 .build();
+    }
+
+    @Bean
+    public Step generateStatements() {
+        return this.stepBuilderFactory.get("generateStatements")
+                .<Statement, Statement>chunk(1)
+                .reader(statementItemReader(null))
+//                .processor(itemProcessor)
+//                .writer(statementItemWriter(null))
+                .build();
+    }
+
+    @Bean
+    public JdbcCursorItemReader<Statement> statementItemReader(DataSource dataSource) {
+
+        return new JdbcCursorItemReaderBuilder<Statement>()
+                .name("statementItemReader")
+                .dataSource(dataSource)
+                .sql("select * from customer")
+                .rowMapper((rs, rowNum) -> {
+                    Customer customer = new Customer(
+                            rs.getLong("customer_id"),
+                            rs.getString("first_name"),
+                            rs.getString("middle_name"),
+                            rs.getString("last_name"),
+                            rs.getString("address1"),
+                            rs.getString("address2"),
+                            rs.getString("city"),
+                            rs.getString("state"),
+                            rs.getString("postal_code"),
+                            rs.getString("ssn"),
+                            rs.getString("email_address"),
+                            rs.getString("home_phone"),
+                            rs.getString("cell_phone"),
+                            rs.getString("work_phone"),
+                            rs.getInt("notification_pref"));
+
+                    return new Statement(customer);
+
+                }).build();
     }
 
     @Bean
