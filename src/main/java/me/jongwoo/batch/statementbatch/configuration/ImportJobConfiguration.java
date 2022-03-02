@@ -10,8 +10,6 @@ import org.springframework.batch.core.configuration.annotation.JobBuilderFactory
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
-import org.springframework.batch.item.ItemReader;
-import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.database.JdbcBatchItemWriter;
 import org.springframework.batch.item.database.JdbcCursorItemReader;
 import org.springframework.batch.item.database.builder.JdbcBatchItemWriterBuilder;
@@ -26,7 +24,6 @@ import org.springframework.batch.item.support.ClassifierCompositeItemWriter;
 import org.springframework.batch.item.support.builder.ClassifierCompositeItemWriterBuilder;
 import org.springframework.batch.item.validator.ValidatingItemProcessor;
 import org.springframework.batch.item.xml.StaxEventItemReader;
-import org.springframework.batch.item.xml.StaxEventItemWriter;
 import org.springframework.batch.item.xml.builder.StaxEventItemReaderBuilder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -62,7 +59,7 @@ public class ImportJobConfiguration {
         return this.stepBuilderFactory.get("applyTransactions")
                 .<Transaction, Transaction>chunk(100)
                 .reader(applyTransactionReader(null))
-//                .writer(applyTransactionWriter(null))
+                .writer(applyTransactionWriter(null))
                 .build()
                 ;
     }
@@ -78,7 +75,7 @@ public class ImportJobConfiguration {
                         "credit, " +
                         "debit, " +
                         "timestamp " +
-                        "from transaction" +
+                        "from transaction " +
                         "order by timestamp")
                 .rowMapper((rs, rowNum) ->
                     new Transaction(
@@ -92,9 +89,17 @@ public class ImportJobConfiguration {
                 .build();
     }
 
-//    @Bean
-//    public JdbcBatchItemWriter<Transaction> applyTransactionWriter(Object o) {
-//    }
+    @Bean
+    public JdbcBatchItemWriter<Transaction> applyTransactionWriter(DataSource dataSource) {
+        return new JdbcBatchItemWriterBuilder<Transaction>()
+                .dataSource(dataSource)
+                .sql("UPDATE ACCOUNT SET " +
+                        "BALANCE = BALANCE + :transactionAmount " +
+                        "WHERE ACCOUNT_ID = :accountId")
+                .beanMapped()
+                .assertUpdates(true)
+                .build();
+    }
 
     @Bean
     public Step importTransactions() {
