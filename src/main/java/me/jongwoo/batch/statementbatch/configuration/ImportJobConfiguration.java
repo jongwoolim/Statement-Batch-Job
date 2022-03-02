@@ -1,6 +1,7 @@
 package me.jongwoo.batch.statementbatch.configuration;
 
 import lombok.RequiredArgsConstructor;
+import me.jongwoo.batch.statementbatch.batch.AccountItemProcessor;
 import me.jongwoo.batch.statementbatch.batch.CustomerItemValidator;
 import me.jongwoo.batch.statementbatch.batch.CustomerUpdateClassifier;
 import me.jongwoo.batch.statementbatch.domain.*;
@@ -57,7 +58,7 @@ public class ImportJobConfiguration {
     }
 
     @Bean
-    public Step generateStatements() {
+    public Step generateStatements(AccountItemProcessor itemProcessor) {
         return this.stepBuilderFactory.get("generateStatements")
                 .<Statement, Statement>chunk(1)
                 .reader(statementItemReader(null))
