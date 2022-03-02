@@ -11,8 +11,11 @@ import org.springframework.batch.core.configuration.annotation.StepBuilderFactor
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
 import org.springframework.batch.item.ItemReader;
+import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.database.JdbcBatchItemWriter;
+import org.springframework.batch.item.database.JdbcCursorItemReader;
 import org.springframework.batch.item.database.builder.JdbcBatchItemWriterBuilder;
+import org.springframework.batch.item.database.builder.JdbcCursorItemReaderBuilder;
 import org.springframework.batch.item.file.FlatFileItemReader;
 import org.springframework.batch.item.file.builder.FlatFileItemReaderBuilder;
 import org.springframework.batch.item.file.mapping.FieldSetMapper;
@@ -50,8 +53,48 @@ public class ImportJobConfiguration {
                 .incrementer(new RunIdIncrementer())
                 .start(importCustomerUpdates())
                 .next(importTransactions())
+                .next(applyTransactions())
                 .build();
     }
+
+    @Bean
+    public Step applyTransactions() {
+        return this.stepBuilderFactory.get("applyTransactions")
+                .<Transaction, Transaction>chunk(100)
+                .reader(applyTransactionReader(null))
+//                .writer(applyTransactionWriter(null))
+                .build()
+                ;
+    }
+
+    @Bean
+    public JdbcCursorItemReader<Transaction> applyTransactionReader(DataSource dataSource) {
+        return new JdbcCursorItemReaderBuilder<Transaction>()
+                .name("applyTransactionReader")
+                .dataSource(dataSource)
+                .sql("select transaction_id, " +
+                        "account_account_id, " +
+                        "description, " +
+                        "credit, " +
+                        "debit, " +
+                        "timestamp " +
+                        "from transaction" +
+                        "order by timestamp")
+                .rowMapper((rs, rowNum) ->
+                    new Transaction(
+                            rs.getLong("transaction_id"),
+                            rs.getLong("account_account_id"),
+                            rs.getString("description"),
+                            rs.getBigDecimal("credit"),
+                            rs.getBigDecimal("debit"),
+                            rs.getTimestamp("timestamp"))
+                )
+                .build();
+    }
+
+//    @Bean
+//    public JdbcBatchItemWriter<Transaction> applyTransactionWriter(Object o) {
+//    }
 
     @Bean
     public Step importTransactions() {
