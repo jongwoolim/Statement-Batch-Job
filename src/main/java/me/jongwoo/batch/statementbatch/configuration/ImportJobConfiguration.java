@@ -62,7 +62,7 @@ public class ImportJobConfiguration {
         return this.stepBuilderFactory.get("generateStatements")
                 .<Statement, Statement>chunk(1)
                 .reader(statementItemReader(null))
-//                .processor(itemProcessor)
+                .processor(itemProcessor)
 //                .writer(statementItemWriter(null))
                 .build();
     }
