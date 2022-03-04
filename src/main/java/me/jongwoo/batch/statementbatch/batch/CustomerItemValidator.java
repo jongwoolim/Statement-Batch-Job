@@ -16,7 +16,7 @@ public class CustomerItemValidator implements Validator<CustomerUpdate> {
 
     private final NamedParameterJdbcTemplate jdbcTemplate;
 
-    private static final String FIND_CUSTOMER = "SELECT COUNT(*) FROM CUSTOMER WHERE customer_id = :id";
+    static final String FIND_CUSTOMER = "SELECT COUNT(*) FROM CUSTOMER WHERE customer_id = :id";
 
     @Override
     public void validate(CustomerUpdate customerUpdate) throws ValidationException {
