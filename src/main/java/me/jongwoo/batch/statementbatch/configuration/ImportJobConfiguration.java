@@ -54,7 +54,7 @@ public class ImportJobConfiguration {
         return this.jobBuilderFactory.get("importJob")
                 .incrementer(new RunIdIncrementer())
                 .start(importCustomerUpdates())
-//                .next(importTransactions())
+                .next(importTransactions())
                 .next(applyTransactions())
                 .next(generateStatements(null))
                 .build();
